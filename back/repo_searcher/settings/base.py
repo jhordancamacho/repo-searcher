@@ -32,7 +32,7 @@ DB_PORT = env("DB_PORT")
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-do3bg(-z&%b43115m8$9b)z%7s*v8e^+$30%vv=*mwq&2+hc#g"
+SECRET_KEY = env("DJANGO_SECRET", default="django-insecure-secret-key")
 
 
 # Application definition

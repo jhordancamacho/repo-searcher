@@ -34,3 +34,47 @@ class RegisterAPITest(APITestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class LoginAPITest(APITestCase):
+    def setUp(self):
+        self.email = 'testuser@example.com'
+        self.username = 'testuser'
+        self.password = 'testpassword123'
+        self.user = User.objects.create_user(username=self.username, email=self.email, password=self.password)
+
+    def test_login_user(self):
+        """
+        Ensure a registered user can login.
+        """
+        url = reverse('login')
+        data = {
+            'username': self.username,
+            'password': self.password
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('auth_token', response.data)
+
+    def test_login_invalid_credentials(self):
+        """
+        Ensure a user cannot login with invalid credentials.
+        """
+        url = reverse('login')
+        data = {
+            'email': self.email,
+            'password': 'wrongpassword'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_login_nonexistent_user(self):
+        """
+        Ensure a nonexistent user cannot login.
+        """
+        url = reverse('login')
+        data = {
+            'email': 'nonexistentuser@example.com',
+            'password': 'testpassword123'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

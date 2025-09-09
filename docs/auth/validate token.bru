@@ -1,0 +1,19 @@
+meta {
+  name: validate token
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{HOST}}auth/jwt/jwt/verify/
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  token: test
+}
+
+settings {
+  encodeUrl: true
+}

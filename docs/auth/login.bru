@@ -1,0 +1,20 @@
+meta {
+  name: login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{HOST}}auth/token/login/
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  username: test
+  password: test
+}
+
+settings {
+  encodeUrl: true
+}

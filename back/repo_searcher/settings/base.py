@@ -48,9 +48,14 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
 	"corsheaders",
+    "rest_framework",
+    "rest_framework.authtoken",
+    "djoser",
 ]
 
-PROJECT_APPS = []
+PROJECT_APPS = [
+    "apps.auth",
+]
 
 
 INSTALLED_APPS = DJANGO_APPS + PROJECT_APPS + THIRD_PARTY_APPS
@@ -58,38 +63,34 @@ INSTALLED_APPS = DJANGO_APPS + PROJECT_APPS + THIRD_PARTY_APPS
 
 CORS_ORIGIN_ALLOW_ALL = True
 
-CORS_ALLOW_HEADERS = [
-	"authorization",
-	"content-type",
-	"Authorization",
-	"Iporigin",
-	"iporigin",
-	"access-control-allow-origin",
-	"user-agent",
-	"referer",
-	"sec-ch-ua",
-	"sec-ch-ua-mobile",
-	"sec-ch-ua-platform",
-	"accept",
-	"accept-encoding",
-	"dnt",
-	"origin",
-	"user-agent",
-	"x-csrftoken",
-	"x-requested-with",
-]
+# CORS_ALLOW_HEADERS = [
+# 	"authorization",
+# 	"content-type",
+# 	"Authorization",
+# 	"Iporigin",
+# 	"iporigin",
+# 	"access-control-allow-origin",
+# 	"user-agent",
+# 	"referer",
+# 	"sec-ch-ua",
+# 	"sec-ch-ua-mobile",
+# 	"sec-ch-ua-platform",
+# 	"accept",
+# 	"accept-encoding",
+# 	"dnt",
+# 	"origin",
+# 	"user-agent",
+# 	"x-csrftoken",
+# 	"x-requested-with",
+# ]
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000", "https://has.egteamdev.entrenese.com", "https://adminhas.egteamdev.entrenese.com"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000",]
 
 
-CORS_ORIGIN_WHITELIST = ("http://localhost:3000", "http://127.0.0.1:3000", "https://has.egteamdev.entrenese.com", "https://adminhas.egteamdev.entrenese.com")
+CORS_ORIGIN_WHITELIST = ("http://localhost:3000", "http://127.0.0.1:3000",)
 
 SECURE_REFERRER_POLICY = "same-origin"
 
-REST_FRAMEWORK = {
-	"DEFAULT_AUTHENTICATION_CLASSES": ("apps.has_app.authentication.CustomJWTAuthentication",),
-	"DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
-}
 
 SIMPLE_JWT = {
 	"ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
@@ -127,7 +128,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "repo_searcher.wsgi.application"
-
+ASGI_APPLICATION = "repo_searcher.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -184,3 +185,46 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    )
+}
+
+# Simple JWT
+SIMPLE_JWT = {
+    'AUTH_HEADER_TYPES': ('JWT', ),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=90),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=180),
+    'ROTATE_REFRESFH_TOKENS':True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_TOKEN_CLASSES': (
+        'rest_framework_simplejwt.tokens.AccessToken',
+    )
+}
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'USERNAME_CHANGED_EMAIL_CONFIRMATION': True,
+    'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
+    'SEND_CONFIRMATION_EMAIL': True,
+    'SEND_ACTIVATION_EMAIL': True,
+    'SET_USERNAME_RETYPE': True,
+    'PASSWORD_RESET_CONFIRM_URL': 'auth/forgot_password_confirm/{uid}/{token}',
+    'SET_PASSWORD_RETYPE': True,
+    'PASSWORD_RESET_CONFIRM_RETYPE': True,
+    'USERNAME_RESET_CONFIRM_URL': 'email/reset/confirm/{uid}/{token}',
+    'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
+    # 'SERIALIZERS': {
+    #     'user_create': 'apps.user.serializers.UserSerializer',
+    #     'user': 'apps.user.serializers.UserSerializer',
+    #     'current_user': 'apps.user.serializers.UserSerializer',
+    #     'user_delete': 'djoser.serializers.UserDeleteSerializer',
+    # },
+}

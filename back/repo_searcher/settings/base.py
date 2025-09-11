@@ -26,6 +26,7 @@ DB_USER = env("DB_USER")
 DB_PASSWORD = env("DB_PASSWORD")
 DB_HOST = env("DB_HOST")
 DB_PORT = env("DB_PORT")
+GITHUB_TOKEN = env("GITHUB_TOKEN")
 
 
 # Quick-start development settings - unsuitable for production
@@ -55,6 +56,7 @@ THIRD_PARTY_APPS = [
 
 PROJECT_APPS = [
     "apps.auth",
+    "apps.github_search",
 ]
 
 

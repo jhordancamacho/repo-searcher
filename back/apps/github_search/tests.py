@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from unittest.mock import patch, MagicMock
-
+import requests
 class RepositorySearchViewTest(TestCase):
     def setUp(self):
         self.client = Client()
@@ -43,3 +43,12 @@ class RepositorySearchViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]['name'], 'test-repo')
+
+    @patch('apps.github_search.views.Api')
+    def test_search_view_invalid_token(self, MockApi):
+        mock_api_instance = MockApi.return_value
+        mock_api_instance.get.side_effect = requests.exceptions.HTTPError(response=MagicMock(status_code=401))
+
+        response = self.client.get(self.url, {'q': 'test'})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json(), {'error': 'Invalid token'})

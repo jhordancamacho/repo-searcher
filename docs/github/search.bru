@@ -1,0 +1,24 @@
+meta {
+  name: searc
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{HOST}}github/search/?q=ia
+  body: none
+  auth: bearer
+}
+
+params:query {
+  q: ia
+}
+
+auth:bearer {
+  token: {{TOKEN}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -5,15 +5,16 @@ meta {
 }
 
 post {
-  url: {{HOST}}auth/jwt/jwt/verify/
+  url: {{HOST}}auth/jwt/verify/
   body: multipartForm
   auth: inherit
 }
 
 body:multipart-form {
-  token: test
+  token: {{TOKEN}}
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

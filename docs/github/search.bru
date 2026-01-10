@@ -5,15 +5,20 @@ meta {
 }
 
 get {
-  url: {{HOST}}github/search/?q=ia 
+  url: {{HOST}}github/search/?q=ia
   body: none
-  auth: inherit
+  auth: bearer
 }
 
 params:query {
-  q: ia 
+  q: ia
+}
+
+auth:bearer {
+  token: {{TOKEN}}
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

@@ -6,8 +6,14 @@ meta {
 
 post {
   url: {{HOST}}auth/register/
-  body: none
+  body: multipartForm
   auth: inherit
+}
+
+body:multipart-form {
+  username: test
+  password: test
+  email: test@test.com
 }
 
 settings {

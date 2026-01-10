@@ -15,6 +15,15 @@ body:multipart-form {
   password: test
 }
 
+vars:post-response {
+  TOKEN: res.body.auth_token
+}
+
+assert {
+  res.status: eq 200
+}
+
 settings {
   encodeUrl: true
+  timeout: 0
 }

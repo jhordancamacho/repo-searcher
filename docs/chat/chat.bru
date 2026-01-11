@@ -1,0 +1,28 @@
+meta {
+  name: chat
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{HOST}}chat/
+  body: multipartForm
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+}
+
+auth:bearer {
+  token: {{TOKEN}}
+}
+
+body:multipart-form {
+  prompt: python
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

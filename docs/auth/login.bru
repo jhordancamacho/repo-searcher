@@ -5,9 +5,15 @@ meta {
 }
 
 post {
-  url: {{HOST}}auth/token/login/
+  url: {{HOST}}auth/jwt/create/
   body: multipartForm
-  auth: inherit
+  auth: apikey
+}
+
+auth:apikey {
+  key: JWT
+  value: {{TOKEN}}
+  placement: header
 }
 
 body:multipart-form {
@@ -16,7 +22,7 @@ body:multipart-form {
 }
 
 vars:post-response {
-  TOKEN: res.body.auth_token
+  TOKEN: res.body.access
 }
 
 assert {

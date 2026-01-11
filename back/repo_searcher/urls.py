@@ -21,4 +21,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("auth/", include("apps.auth.urls")),
     path("github/", include("apps.github_search.urls")),
+    path("chat/", include("apps.chat.urls")),
 ]

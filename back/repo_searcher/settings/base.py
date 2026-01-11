@@ -28,6 +28,12 @@ DB_HOST = env("DB_HOST")
 DB_PORT = env("DB_PORT")
 GITHUB_TOKEN = env("GITHUB_TOKEN")
 
+# LLM Configuration
+LLM_BINDING = env("LLM_BINDING", default="openai")
+LLM_MODEL = env("LLM_MODEL", default="gpt-4o-mini")
+LLM_BINDING_HOST = env("LLM_BINDING_HOST", default="")
+LLM_BINDING_API_KEY = env("LLM_BINDING_API_KEY", default="")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -57,6 +63,7 @@ THIRD_PARTY_APPS = [
 PROJECT_APPS = [
     "apps.auth",
     "apps.github_search",
+    "apps.chat",
 ]
 
 
@@ -190,17 +197,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
-    )
+    "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
 }
 
 # Simple JWT
 SIMPLE_JWT = {
-    'AUTH_HEADER_TYPES': ('JWT', ),
+    'AUTH_HEADER_TYPES': ('Bearer',),
     'ACCESS_TOKEN_LIFETIME': timedelta(days=90),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=180),
     'ROTATE_REFRESFH_TOKENS':True,
@@ -222,7 +225,10 @@ DJOSER = {
     'SET_PASSWORD_RETYPE': True,
     'PASSWORD_RESET_CONFIRM_RETYPE': True,
     'USERNAME_RESET_CONFIRM_URL': 'email/reset/confirm/{uid}/{token}',
-    'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
+    # 'SOCIAL_AUTH_TOKEN_STRATEGY': 'djoser.social.token.jwt.TokenStrategy',
+    'AUTH_TOKEN_CLASSES': (
+        'rest_framework_simplejwt.tokens.AccessToken',
+    ),
     # 'SERIALIZERS': {
     #     'user_create': 'apps.user.serializers.UserSerializer',
     #     'user': 'apps.user.serializers.UserSerializer',

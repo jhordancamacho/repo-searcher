@@ -19,7 +19,7 @@ services:
       - db_data:/var/lib/postgresql/data
   api_repo:
     build: .
-    command: /bin/bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000" #without debugpy vscode
+    command: /bin/bash -c "uv run manage.py migrate && uv run manage.py runserver 0.0.0.0:8000" #without debugpy vscode
     # command:  python -m debugpy --listen 0.0.0.0:5678 --wait-for-client manage.py runserver 0.0.0.0:8000 #with debugpy vscode
     volumes:
       - .:/code

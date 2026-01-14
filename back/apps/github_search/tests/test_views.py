@@ -1,11 +1,17 @@
-from django.test import TestCase, Client
+from apps.auth.test_mixins import AuthenticatedTestCase
+
 from django.urls import reverse
 from unittest.mock import patch, MagicMock
 import requests
-class RepositorySearchViewTest(TestCase):
+from django.contrib.auth import get_user_model
+User = get_user_model()
+class RepositorySearchViewTest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = Client()
+        super().setUp()
+
         self.url = reverse('repository-search')
+
+
 
     def test_search_view_missing_query_param(self):
         response = self.client.get(self.url)

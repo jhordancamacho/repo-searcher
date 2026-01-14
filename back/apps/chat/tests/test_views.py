@@ -1,33 +1,19 @@
-from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
+from apps.auth.test_mixins import AuthenticatedTestCase
+
 from rest_framework import status
 from unittest.mock import patch, MagicMock
 from django.conf import settings
 
 User = get_user_model()
 
-class ChatViewTest(TestCase):
+class ChatViewTest(AuthenticatedTestCase):
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
+
         self.url = reverse('chat')  # Assuming the name is 'chat' from urls.py
-        
-        # Create test user
-        self.user_data = {
-            'username': 'testuser',
-            'password': 'testpassword123',
-            'email': 'test@example.com'
-        }
-        self.user = User.objects.create_user(**self.user_data)
-        
-        # Get JWT token
-        response = self.client.post('/auth/jwt/create/', {
-            'username': self.user_data['username'],
-            'password': self.user_data['password']
-        })
-        self.token = response.data['access']
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+
 
     def test_unauthorized(self):
         self.client.credentials()  # Remove credentials

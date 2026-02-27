@@ -44,13 +44,6 @@ coverage.xml
 .ipynb_checkpoints/
 .pyenv
 
-# Version Control
-.git/
-.gitignore
-.svn/
-.hg/
-.bzr/
-CVS/
 
 # Editors & IDEs
 .vscode/

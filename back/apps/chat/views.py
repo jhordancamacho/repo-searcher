@@ -1,17 +1,18 @@
 import json
 import asyncio
+from typing import List
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from openai import OpenAI
 from .mcp_tools import get_available_tools, execute_tool
-
+from .schemas import OutputSchema, ChatOutput, BodyParams
 
 class ChatView(APIView):
-    def post(self, request):
-        prompt = request.data.get('prompt', '')
-        
+    def post(self, request: BodyParams):
+        prompt = request.prompt
+        programming_language = request.programming_language
         if not prompt:
             return Response(
                 {'error': 'El campo "prompt" es requerido'},
@@ -20,9 +21,10 @@ class ChatView(APIView):
         
         try:
             # Configurar cliente OpenAI
-            client = OpenAI(
+            client : OpenAI = OpenAI(
                 api_key=settings.LLM_BINDING_API_KEY,
-                base_url=settings.LLM_BINDING_HOST if settings.LLM_BINDING_HOST else None
+                base_url=settings.LLM_BINDING_HOST if settings.LLM_BINDING_HOST else None,
+
             )
             
             messages = [
@@ -32,15 +34,15 @@ class ChatView(APIView):
                                "Usa la herramienta search_github_repos cuando el usuario quiera encontrar "
                                "repositorios, proyectos o librerías. Responde en español."
                 },
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": f"{prompt} - {programming_language}"}
             ]
             
-            # Primera llamada al LLM
+            # Primera llamada al LLM con tools (usa create, no parse)
             response = client.chat.completions.create(
                 model=settings.LLM_MODEL,
                 messages=messages,
                 tools=get_available_tools(),
-                tool_choice="auto"
+                tool_choice="auto",
             )
             
             assistant_message = response.choices[0].message
@@ -59,7 +61,7 @@ class ChatView(APIView):
                     asyncio.set_event_loop(loop)
                     try:
                         tool_result = loop.run_until_complete(
-                            execute_tool(tool_name, tool_args,request)
+                            execute_tool(tool_name, tool_args, request)
                         )
                     finally:
                         loop.close()
@@ -70,13 +72,18 @@ class ChatView(APIView):
                         "content": tool_result
                     })
                 
-                # Segunda llamada al LLM con los resultados
-                final_response = client.chat.completions.create(
+                # Segunda llamada al LLM con response_format para obtener JSON estructurado
+                final_response = client.chat.completions.parse(
                     model=settings.LLM_MODEL,
-                    messages=messages
+                    messages=messages,
+                    response_format=ChatOutput,
                 )
                 
-                final_content = final_response.choices[0].message.content
+                parsed = final_response.choices[0].message.parsed
+                if parsed:
+                    final_content = parsed.model_dump(mode='json')
+                else:
+                    final_content = final_response.choices[0].message.content
             else:
                 final_content = assistant_message.content
             
@@ -86,6 +93,7 @@ class ChatView(APIView):
             })
             
         except Exception as e:
+            print('\n┌─ apps/chat/views.py:97 - e\n└─', e)
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

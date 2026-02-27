@@ -14,6 +14,7 @@ dependencies = [
     "djoser==2.3.3",
     "drf-spectacular==0.28.0",
     "psycopg2-binary>=2.9.10",
-    "openai>=1.0.0",
     "httpx>=0.27.0",
+    "openai>=2.15.0",
+    "pydantic>=2.12.5",
 ]

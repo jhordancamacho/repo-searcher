@@ -17,8 +17,11 @@ class RepositorySearchView(APIView):
             results = use_case.execute(query)
 
             serializer = RepositorySerializer(results.get('items', []), many=True)
+            print(f"==>> serializer.data: {serializer.data}")
             return Response(serializer.data)
         except requests.exceptions.HTTPError as e:
+            print(f"==>> e: {e}")
             if e.response.status_code == 401:
                 return Response({'error': 'Invalid token'}, status=401)
             return Response({'error': 'An error occurred'}, status=500)
+

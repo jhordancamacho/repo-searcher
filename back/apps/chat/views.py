@@ -11,8 +11,8 @@ from .schemas import OutputSchema, ChatOutput, BodyParams
 
 class ChatView(APIView):
     def post(self, request: BodyParams):
-        prompt = request.prompt
-        programming_language = request.programming_language
+        prompt = request.data.get("prompt")
+        programming_language = request.data.get("programming_language", None)
         if not prompt:
             return Response(
                 {'error': 'El campo "prompt" es requerido'},
@@ -27,14 +27,22 @@ class ChatView(APIView):
 
             )
             
+            # Construir mensaje del sistema dinámicamente basado en herramientas disponibles
+            available_tools = get_available_tools()
+            tools_description = "\n".join([
+                f"- {tool['function']['name']}: {tool['function']['description']}"
+                for tool in available_tools
+            ])
+            
             messages = [
                 {
                     "role": "system",
-                    "content": "Eres un asistente útil que ayuda a buscar repositorios en GitHub. "
-                               "Usa la herramienta search_github_repos cuando el usuario quiera encontrar "
-                               "repositorios, proyectos o librerías. Responde en español."
+                    "content": f"Eres un asistente útil para búsquedas en GitHub.\n"
+                               f"Herramientas disponibles:\n{tools_description}\n"
+                               f"Usa las herramientas apropiadas cuando sea necesario. "
+                               f"Responde en español."
                 },
-                {"role": "user", "content": f"{prompt} - {programming_language}"}
+                {"role": "user", "content": f"{prompt}" + (f" (lenguaje: {programming_language})" if programming_language else "")}
             ]
             
             # Primera llamada al LLM con tools (usa create, no parse)
@@ -54,7 +62,9 @@ class ChatView(APIView):
                 # Ejecutar cada herramienta
                 for tool_call in assistant_message.tool_calls:
                     tool_name = tool_call.function.name
+                    print(f"==>> tool_name: {tool_name}")
                     tool_args = json.loads(tool_call.function.arguments)
+                    print(f"==>> tool_args: {tool_args}")
                     
                     # Ejecutar la herramienta de forma async
                     loop = asyncio.new_event_loop()
@@ -63,6 +73,7 @@ class ChatView(APIView):
                         tool_result = loop.run_until_complete(
                             execute_tool(tool_name, tool_args, request)
                         )
+                        print(f"==>> tool_result: {tool_result}")
                     finally:
                         loop.close()
                     

@@ -1,0 +1,19 @@
+meta {
+  name: test
+  type: ws
+  seq: 4
+}
+
+ws {
+  url: test
+  body: ws
+  auth: inherit
+}
+
+body:ws {
+  name: message 1
+  type: json
+  content: '''
+    {}
+  '''
+}

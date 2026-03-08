@@ -1,9 +1,9 @@
 from ...data.repositories.repository import GithubRepository
 
 
-class SearchUseCase:
+class SearchCodeUseCase:
     def __init__(self, repository: GithubRepository):
         self.repository = repository
 
-    def execute(self, query: str, language: str = None):
-        return self.repository.search(query, language=language)
+    def execute(self, query: str):
+        return self.repository.search_code(query)

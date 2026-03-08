@@ -1,10 +1,12 @@
 from rest_framework import serializers
 
+
 class OwnerSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     login = serializers.CharField()
     avatar_url = serializers.URLField()
     html_url = serializers.URLField()
+
 
 class RepositorySerializer(serializers.Serializer):
     id = serializers.IntegerField()
@@ -19,3 +21,16 @@ class RepositorySerializer(serializers.Serializer):
     open_issues_count = serializers.IntegerField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
+
+
+class CodeSearchRepositorySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    full_name = serializers.CharField()
+    html_url = serializers.URLField()
+
+
+class CodeSearchItemSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    path = serializers.CharField()
+    html_url = serializers.URLField()
+    repository = CodeSearchRepositorySerializer()

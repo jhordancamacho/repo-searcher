@@ -1,9 +1,8 @@
-import httpx
 import json
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List
-from django.urls import reverse
 from rest_framework.request import Request
+
 
 # ==========================================
 # 1. INTERFACES (Dependency Inversion Principle)
@@ -26,7 +25,7 @@ class MCPTool(ABC):
 
 class SearchGithubReposTool(MCPTool):
     """Herramienta existente para buscar repositorios."""
-    
+
     @property
     def name(self) -> str:
         return "search_github_repos"
@@ -43,34 +42,34 @@ class SearchGithubReposTool(MCPTool):
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Términos de búsqueda para encontrar repositorios (ej: 'machine learning python', 'react framework')"
-                        }
+                            "description": "Términos de búsqueda para encontrar repositorios (ej: 'machine learning python', 'react framework')",
+                        },
+                        "programming_language": {
+                            "type": "string",
+                            "description": "Filtra por lenguaje de programación (ej: 'python', 'javascript')",
+                        },
                     },
-                    "required": ["query"]
-                }
-            }
+                    "required": ["query"],
+                },
+            },
         }
 
     async def execute(self, arguments: Dict[str, Any], request: Request) -> Any:
+        from apps.github_search.views import RepositorySearchView
+
         query = arguments.get("query", "")
-        req_url = request.build_absolute_uri(reverse('repository-search'))
-        
-        # Convertimos headers a dict para httpx
-        headers = {k: v for k, v in request.headers.items()}
-        
-        # Usamos httpx para llamadas asíncronas
-        async with httpx.AsyncClient() as client:
-            response = await client.get(req_url, headers=headers, params={"q": query})
-            print(f"==>> response: {response}")
-            response.raise_for_status()
-            res = response.json()
-            print('\n┌─ back/apps/chat/mcp_tools.py - repos search\n└─', res)
-            return res
+        request.query_params._mutable = True
+        request.query_params["q"] = query
+        request.query_params._mutable = False
+
+        view = RepositorySearchView()
+        response = view.get(request)
+        return response.data
 
 
 class SearchGithubCodeTool(MCPTool):
     """Nueva herramienta para buscar código específico dentro de GitHub."""
-    
+
     @property
     def name(self) -> str:
         return "search_github_code"
@@ -85,51 +84,64 @@ class SearchGithubCodeTool(MCPTool):
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "search_term": {"type": "string", "description": "Término exacto o palabra clave a buscar en el código"},
-                        "repo": {"type": "string", "description": "Repositorio específico donde buscar (ej: 'encode/django-rest-framework')"},
-                        "language": {"type": "string", "description": "Lenguaje de programación (ej: 'python', 'javascript')"},
-                        "filename": {"type": "string", "description": "Nombre de archivo específico (ej: 'views.py')"},
-                        "extension": {"type": "string", "description": "Extensión del archivo (ej: 'js', 'py')"},
-                        "path": {"type": "string", "description": "Ruta dentro del repositorio"}
+                        "search_term": {
+                            "type": "string",
+                            "description": "Término exacto o palabra clave a buscar en el código",
+                        },
+                        "repo": {
+                            "type": "string",
+                            "description": "Repositorio específico donde buscar (ej: 'encode/django-rest-framework')",
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Lenguaje de programación (ej: 'python', 'javascript')",
+                        },
+                        "filename": {
+                            "type": "string",
+                            "description": "Nombre de archivo específico (ej: 'views.py')",
+                        },
+                        "extension": {
+                            "type": "string",
+                            "description": "Extensión del archivo (ej: 'js', 'py')",
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "Ruta dentro del repositorio",
+                        },
                     },
-                    "required": ["search_term"]
-                }
-            }
+                    "required": ["search_term"],
+                },
+            },
         }
 
     def _build_search_query(self, kwargs: Dict[str, Any]) -> str:
         """Responsabilidad única: Construir el query string formato GitHub."""
         query_parts = [kwargs.get("search_term", "")]
-        
-        if kwargs.get("repo"): query_parts.append(f"repo:{kwargs['repo']}")
-        if kwargs.get("language"): query_parts.append(f"language:{kwargs['language']}")
-        if kwargs.get("filename"): query_parts.append(f"filename:{kwargs['filename']}")
-        if kwargs.get("extension"): query_parts.append(f"extension:{kwargs['extension']}")
-        if kwargs.get("path"): query_parts.append(f"path:{kwargs['path']}")
-            
+
+        if kwargs.get("repo"):
+            query_parts.append(f"repo:{kwargs['repo']}")
+        if kwargs.get("language"):
+            query_parts.append(f"language:{kwargs['language']}")
+        if kwargs.get("filename"):
+            query_parts.append(f"filename:{kwargs['filename']}")
+        if kwargs.get("extension"):
+            query_parts.append(f"extension:{kwargs['extension']}")
+        if kwargs.get("path"):
+            query_parts.append(f"path:{kwargs['path']}")
+
         return "+".join(query_parts)
 
     async def execute(self, arguments: Dict[str, Any], request: Request) -> Any:
+        from apps.github_search.views import CodeSearchView
+
         query = self._build_search_query(arguments)
-        url = "https://api.github.com/search/code"
-        
-        params = {
-            "q": query,
-            "per_page": arguments.get("per_page", 10)
-        }
-        
-        headers = {"Accept": "application/vnd.github.v3+json"}
-        # Si tienes un token configurado en tu app, agrégalo aquí:
-        # headers["Authorization"] = f"Bearer TU_TOKEN"
-        
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=params)
-            
-            if response.status_code == 403:
-                return {"error": "Límite de peticiones de GitHub excedido (Rate Limit). Intenta de nuevo más tarde."}
-                
-            response.raise_for_status()
-            return response.json()
+        request.query_params._mutable = True
+        request.query_params["q"] = query
+        request.query_params._mutable = False
+
+        view = CodeSearchView()
+        response = view.get(request)
+        return response.data
 
 
 # ==========================================
@@ -137,7 +149,7 @@ class SearchGithubCodeTool(MCPTool):
 # ==========================================
 class ToolRegistry:
     """Gestiona y ejecuta las herramientas disponibles dinámicamente."""
-    
+
     def __init__(self):
         self._tools: Dict[str, MCPTool] = {}
 
@@ -147,11 +159,13 @@ class ToolRegistry:
     def get_schemas(self) -> List[Dict[str, Any]]:
         return [tool.schema for tool in self._tools.values()]
 
-    async def execute(self, tool_name: str, arguments: Dict[str, Any], request: Request) -> str:
+    async def execute(
+        self, tool_name: str, arguments: Dict[str, Any], request: Request
+    ) -> str:
         tool = self._tools.get(tool_name)
         if not tool:
             return json.dumps({"error": f"Tool '{tool_name}' not found"})
-            
+
         try:
             result = await tool.execute(arguments, request)
             return json.dumps(result, ensure_ascii=False)
@@ -169,9 +183,11 @@ registry.register(SearchGithubReposTool())
 registry.register(SearchGithubCodeTool())
 # Para agregar más en el futuro, solo llamas a: registry.register(NuevaHerramientaTool())
 
+
 def get_available_tools() -> list:
     """Retorna la lista de herramientas disponibles para el LLM"""
     return registry.get_schemas()
+
 
 async def execute_tool(tool_name: str, arguments: dict, request: Request) -> str:
     """Ejecuta una herramienta por su nombre a través del registro"""

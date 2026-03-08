@@ -1,13 +1,13 @@
 import json
 import asyncio
-from typing import List
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from openai import OpenAI
 from .mcp_tools import get_available_tools, execute_tool
-from .schemas import OutputSchema, ChatOutput, BodyParams
+from .schemas import BodyParams, ChatOutput
+
 
 class ChatView(APIView):
     def post(self, request: BodyParams):
@@ -15,97 +15,120 @@ class ChatView(APIView):
         programming_language = request.data.get("programming_language", None)
         if not prompt:
             return Response(
-                {'error': 'El campo "prompt" es requerido'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": 'El campo "prompt" es requerido'},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-        
+
         try:
             # Configurar cliente OpenAI
-            client : OpenAI = OpenAI(
+            client: OpenAI = OpenAI(
                 api_key=settings.LLM_BINDING_API_KEY,
-                base_url=settings.LLM_BINDING_HOST if settings.LLM_BINDING_HOST else None,
-
+                base_url=settings.LLM_BINDING_HOST
+                if settings.LLM_BINDING_HOST
+                else None,
             )
-            
+
             # Construir mensaje del sistema dinámicamente basado en herramientas disponibles
             available_tools = get_available_tools()
-            tools_description = "\n".join([
-                f"- {tool['function']['name']}: {tool['function']['description']}"
-                for tool in available_tools
-            ])
-            
+            tools_description = "\n".join(
+                [
+                    f"- {tool['function']['name']}: {tool['function']['description']}"
+                    for tool in available_tools
+                ]
+            )
+
+            output_schema = ChatOutput.model_json_schema()
+
             messages = [
                 {
                     "role": "system",
                     "content": f"Eres un asistente útil para búsquedas en GitHub.\n"
-                               f"Herramientas disponibles:\n{tools_description}\n"
-                               f"Usa las herramientas apropiadas cuando sea necesario. "
-                               f"Responde en español."
+                    f"Herramientas disponibles:\n{tools_description}\n"
+                    f"Usa las herramientas apropiadas cuando sea necesario. "
+                    f"Tu respuesta final DEBE ser exclusivamente un JSON válido que cumpla con este schema:\n"
+                    f"{json.dumps(output_schema, ensure_ascii=False)}\n"
+                    f"No incluyas texto fuera del JSON. Responde en español.",
                 },
-                {"role": "user", "content": f"{prompt}" + (f" (lenguaje: {programming_language})" if programming_language else "")}
+                {
+                    "role": "user",
+                    "content": f"{prompt}"
+                    + (
+                        f" (lenguaje: {programming_language})"
+                        if programming_language
+                        else ""
+                    ),
+                },
             ]
-            
-            # Primera llamada al LLM con tools (usa create, no parse)
+
+            # Permite múltiples rondas de tools: repos -> code -> repos -> ...
+            max_tool_rounds = 6
+            tool_rounds = 0
+
             response = client.chat.completions.create(
                 model=settings.LLM_MODEL,
                 messages=messages,
-                tools=get_available_tools(),
+                tools=available_tools,
                 tool_choice="auto",
             )
-            
             assistant_message = response.choices[0].message
-            
-            # Si el LLM quiere usar herramientas
-            if assistant_message.tool_calls:
-                messages.append(assistant_message)
-                
-                # Ejecutar cada herramienta
-                for tool_call in assistant_message.tool_calls:
-                    tool_name = tool_call.function.name
-                    print(f"==>> tool_name: {tool_name}")
-                    tool_args = json.loads(tool_call.function.arguments)
-                    print(f"==>> tool_args: {tool_args}")
-                    
-                    # Ejecutar la herramienta de forma async
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    try:
+
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                while assistant_message.tool_calls and tool_rounds < max_tool_rounds:
+                    tool_rounds += 1
+                    messages.append(assistant_message)
+
+                    for tool_call in assistant_message.tool_calls:
+                        tool_name = tool_call.function.name
+
+                        try:
+                            tool_args = json.loads(tool_call.function.arguments or "{}")
+                        except json.JSONDecodeError:
+                            tool_args = {}
+
                         tool_result = loop.run_until_complete(
                             execute_tool(tool_name, tool_args, request)
                         )
-                        print(f"==>> tool_result: {tool_result}")
-                    finally:
-                        loop.close()
-                    
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool_call.id,
-                        "content": tool_result
-                    })
-                
-                # Segunda llamada al LLM con response_format para obtener JSON estructurado
-                final_response = client.chat.completions.parse(
-                    model=settings.LLM_MODEL,
-                    messages=messages,
-                    response_format=ChatOutput,
-                )
-                
-                parsed = final_response.choices[0].message.parsed
-                if parsed:
-                    final_content = parsed.model_dump(mode='json')
+
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call.id,
+                                "content": tool_result,
+                            }
+                        )
+                    # Siguiente ronda: el LLM decide si necesita más tools o responde
+                    response = client.chat.completions.create(
+                        model=settings.LLM_MODEL,
+                        messages=messages,
+                        tools=available_tools,
+                        tool_choice="auto",
+                    )
+                    assistant_message = response.choices[0].message
+            finally:
+                loop.close()
+
+            final_content = assistant_message.content
+
+            try:
+                parsed = ChatOutput.model_validate_json(final_content)
+            except Exception:
+                # Si el LLM envuelve el JSON en markdown, intentar extraerlo
+                import re
+
+                match = re.search(r"\{.*\}", final_content, re.DOTALL)
+                if match:
+                    parsed = ChatOutput.model_validate_json(match.group())
                 else:
-                    final_content = final_response.choices[0].message.content
-            else:
-                final_content = assistant_message.content
-            
-            return Response({
-                'response': final_content,
-                'prompt': prompt
-            })
-            
-        except Exception as e:
-            print('\n┌─ apps/chat/views.py:97 - e\n└─', e)
+                    raise ValueError("La respuesta del modelo no contiene JSON válido")
+
             return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"response": parsed.model_dump(mode="json"), "prompt": prompt}
+            )
+
+        except Exception as e:
+            print("\n┌─ apps/chat/views.py:97 - e\n└─", e)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

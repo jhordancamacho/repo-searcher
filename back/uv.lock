@@ -55,6 +55,7 @@ dependencies = [
     { name = "djangorestframework-simplejwt" },
     { name = "djoser" },
     { name = "drf-spectacular" },
+    { name = "gunicorn" },
     { name = "httpx" },
     { name = "openai" },
     { name = "psycopg2-binary" },
@@ -71,6 +72,7 @@ requires-dist = [
     { name = "djangorestframework-simplejwt", specifier = ">=5.2.2" },
     { name = "djoser", specifier = "==2.3.3" },
     { name = "drf-spectacular", specifier = "==0.28.0" },
+    { name = "gunicorn", specifier = ">=25.1.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "openai", specifier = ">=2.15.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
@@ -375,6 +377,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/da/b9/741056455aed00fa51a1df41fad5ad27c8e0d433b6bf490d4e60e2808bc6/drf_spectacular-0.28.0.tar.gz", hash = "sha256:2c778a47a40ab2f5078a7c42e82baba07397bb35b074ae4680721b2805943061", size = 237849, upload-time = "2024-11-30T08:49:02.355Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/66/c2929871393b1515c3767a670ff7d980a6882964a31a4ca2680b30d7212a/drf_spectacular-0.28.0-py3-none-any.whl", hash = "sha256:856e7edf1056e49a4245e87a61e8da4baff46c83dbc25be1da2df77f354c7cb4", size = 103928, upload-time = "2024-11-30T08:48:57.288Z" },
+]
+
+[[package]]
+name = "gunicorn"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/13/ef67f59f6a7896fdc2c1d62b5665c5219d6b0a9a1784938eb9a28e55e128/gunicorn-25.1.0.tar.gz", hash = "sha256:1426611d959fa77e7de89f8c0f32eed6aa03ee735f98c01efba3e281b1c47616", size = 594377, upload-time = "2026-02-13T11:09:58.989Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/da/73/4ad5b1f6a2e21cf1e85afdaad2b7b1a933985e2f5d679147a1953aaa192c/gunicorn-25.1.0-py3-none-any.whl", hash = "sha256:d0b1236ccf27f72cfe14bce7caadf467186f19e865094ca84221424e839b8b8b", size = 197067, upload-time = "2026-02-13T11:09:57.146Z" },
 ]
 
 [[package]]

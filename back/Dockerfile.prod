@@ -1,0 +1,45 @@
+# Etapa de construcción
+FROM python:3.13-slim AS builder
+ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE 1
+
+WORKDIR /code
+
+# Instalar herramientas de compilación necesarias solo para construir dependencias
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config gcc g++ default-libmysqlclient-dev build-essential\
+    libssl-dev libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY pyproject.toml uv.lock* ./
+
+# Instalar dependencias en un entorno virtual
+RUN uv sync --frozen --no-dev
+
+# Etapa final
+FROM python:3.13-slim
+ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PATH="/code/.venv/bin:$PATH"
+
+WORKDIR /code
+
+# Instalar solo librerías de ejecución necesarias
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar el entorno virtual desde el builder
+COPY --from=builder /code/.venv /code/.venv
+COPY . .
+
+# Crear un usuario no root por seguridad
+RUN addgroup --system django && adduser --system --group django
+RUN chown -R django:django /code
+USER django
+
+EXPOSE 8000
+
+# Comando para ejecutar con Gunicorn (ajusta 'repo_searcher.wsgi' si es necesario)
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "repo_searcher.wsgi:application"]

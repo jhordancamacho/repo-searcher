@@ -1,0 +1,45 @@
+services:
+  postgres_api:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - db_data_prod:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api_repo:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    command: >
+      sh -c "uv run python manage.py migrate &&
+             uv run gunicorn repo_searcher.wsgi:application --bind 0.0.0.0:8000"
+    environment:
+      - DEBUG=False
+      - DB_HOST=postgres_api
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      postgres_api:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: always
+    networks:
+      - backend
+
+volumes:
+  db_data_prod:
+
+networks:
+  backend:

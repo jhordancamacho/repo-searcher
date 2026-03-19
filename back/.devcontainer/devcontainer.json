@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "Python 3.12",
+	"name": "repo_searcher backend",
 	"dockerComposeFile": "../docker-compose.yml",
 	"service": "api_repo",
 	"workspaceFolder": "/code",
@@ -16,7 +16,6 @@
 				"donjayamanne.githistory",
 				"lakshmikanthayyadevara.githooks",
 				"oderwat.indent-rainbow",
-				"ms-python.python",
 				"ms-python.vscode-pylance",
 				"ms-python.debugpy",
 				"WeidaWang.quick-python-print",
@@ -24,7 +23,9 @@
 				"eamodio.gitlens",
 				"ms-python.black-formatter",
 				"meta.pyrefly",
-				"streetsidesoftware.code-spell-checker-spanish"
+				"streetsidesoftware.code-spell-checker-spanish",
+				"virgilsisoe.python-easy-print",
+				"charliermarsh.ruff"
 			]
 		}
 	}

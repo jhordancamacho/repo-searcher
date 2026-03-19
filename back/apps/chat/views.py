@@ -30,24 +30,27 @@ class ChatView(APIView):
 
             # Construir mensaje del sistema dinámicamente basado en herramientas disponibles
             available_tools = get_available_tools()
-            tools_description = "\n".join(
-                [
-                    f"- {tool['function']['name']}: {tool['function']['description']}"
-                    for tool in available_tools
-                ]
-            )
 
             output_schema = ChatOutput.model_json_schema()
 
             messages = [
                 {
                     "role": "system",
-                    "content": f"Eres un asistente útil para búsquedas en GitHub.\n"
-                    f"Herramientas disponibles:\n{tools_description}\n"
-                    f"Usa las herramientas apropiadas cuando sea necesario. "
-                    f"Tu respuesta final DEBE ser exclusivamente un JSON válido que cumpla con este schema:\n"
-                    f"{json.dumps(output_schema, ensure_ascii=False)}\n"
-                    f"No incluyas texto fuera del JSON. Responde en español.",
+                    "content": (
+                        "Eres un asistente experto en búsquedas de código en GitHub y desarrollador Senior.\n"
+                        "WORKFLOW OBLIGATORIO:\n"
+                        "1. Analiza el prompt del usuario y utiliza la herramienta 'github_deep_search' "
+                        "generando 'repo_queries' y 'code_queries' optimizados.\n"
+                        "2. Al recibir los resultados (que incluyen READMEs), evalúa semánticamente cuál cumple mejor "
+                        "con los requisitos y verifica su madurez.\n"
+                        "3. Tu respuesta final DEBE ser un JSON válido que cumpla con este schema:\n"
+                        f"{json.dumps(output_schema, ensure_ascii=False)}\n"
+                        "REGLA DE RESPUESTA:\n"
+                        "- El primer elemento de 'repositories' DEBE ser el proyecto GANADOR.\n"
+                        "- En el campo 'description' del ganador, incluye una breve JUSTIFICACIÓN de por qué fue seleccionado.\n"
+                        "- Los siguientes 3 elementos deben ser las MENCIONES HONORÍFICAS.\n"
+                        "Responde en español. No incluyas texto fuera del JSON."
+                    ),
                 },
                 {
                     "role": "user",
@@ -59,7 +62,6 @@ class ChatView(APIView):
                     ),
                 },
             ]
-
             # Permite múltiples rondas de tools: repos -> code -> repos -> ...
             max_tool_rounds = 6
             tool_rounds = 0
@@ -77,18 +79,29 @@ class ChatView(APIView):
             try:
                 while assistant_message.tool_calls and tool_rounds < max_tool_rounds:
                     tool_rounds += 1
+                    print("\n┌─ apps/chat/views.py:80 - tool_rounds\n└─", tool_rounds)
                     messages.append(assistant_message)
 
                     for tool_call in assistant_message.tool_calls:
                         tool_name = tool_call.function.name
+                        print("\n┌─ apps/chat/views.py:84 - tool_name\n└─", tool_name)
 
                         try:
                             tool_args = json.loads(tool_call.function.arguments or "{}")
+                            print(
+                                "\n┌─ apps/chat/views.py:87 - tool_args\n└─", tool_args
+                            )
                         except json.JSONDecodeError:
+                            print(
+                                "\n┌─ apps/chat/views.py:89 - json.JSONDecodeError\n└─"
+                            )
                             tool_args = {}
 
                         tool_result = loop.run_until_complete(
                             execute_tool(tool_name, tool_args, request)
+                        )
+                        print(
+                            "\n┌─ apps/chat/views.py:96 - tool_result\n└─", tool_result
                         )
 
                         messages.append(

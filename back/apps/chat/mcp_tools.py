@@ -1,4 +1,5 @@
 import json
+import base64
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List
 from rest_framework.request import Request
@@ -42,7 +43,7 @@ class SearchGithubReposTool(MCPTool):
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Términos de búsqueda para encontrar repositorios (ej: 'machine learning python', 'react framework')",
+                            "description": "Términos de búsqueda para encontrar repositorios",
                         },
                         "programming_language": {
                             "type": "string",
@@ -90,7 +91,7 @@ class SearchGithubCodeTool(MCPTool):
                         },
                         "repo": {
                             "type": "string",
-                            "description": "Repositorio específico donde buscar (ej: 'encode/django-rest-framework')",
+                            "description": "Repositorio específico donde buscar (ej: 'encode/django-rest-framework'). IMPORTANTE: Este valor lo debes extraer del campo 'full_name' que retorna la herramienta 'search_github_repos'.",
                         },
                         "language": {
                             "type": "string",
@@ -144,6 +145,119 @@ class SearchGithubCodeTool(MCPTool):
         return response.data
 
 
+class GithubDeepSearchTool(MCPTool):
+    """
+    Herramienta avanzada para realizar búsquedas duales, filtrado y extracción de contexto.
+    Implementa el flujo descrito en instructions.md.
+    """
+
+    @property
+    def name(self) -> str:
+        return "github_deep_search"
+
+    @property
+    def schema(self) -> Dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": "Realiza una búsqueda profunda en GitHub combinando búsquedas de repositorios y de código para encontrar los mejores proyectos. Úsala cuando necesites encontrar los repositorios más relevantes y maduros para una tecnología o caso de uso específico.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "repo_queries": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Lista de consultas optimizadas para búsqueda de repositorios (ej: 'fastapi claude language:python')",
+                        },
+                        "code_queries": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Lista de consultas optimizadas para búsqueda de código (ej: 'import anthropic filename:requirements.txt')",
+                        },
+                    },
+                    "required": ["repo_queries", "code_queries"],
+                },
+            },
+        }
+
+    async def execute(self, arguments: Dict[str, Any], request: Request) -> Any:
+        from apps.github_search.api.api import Api
+        from apps.github_search.data.repositories.repository import GithubRepository
+
+        repo_queries = arguments.get("repo_queries", [])
+        code_queries = arguments.get("code_queries", [])
+
+        api = Api()
+        repo_service = GithubRepository(api)
+
+        found_repos_names = set()
+
+        # Step 2: Dual Search
+        for q in repo_queries:
+            try:
+                res = repo_service.search(q)
+                for item in res.get("items", []):
+                    found_repos_names.add(item["full_name"])
+            except Exception:
+                continue
+
+        for q in code_queries:
+            try:
+                # Search code can fail due to secondary limits, handle gracefully
+                res = repo_service.search_code(q)
+                for item in res.get("items", []):
+                    if "repository" in item:
+                        found_repos_names.add(item["repository"]["full_name"])
+            except Exception:
+                continue
+
+        # Step 3: Metadata and Ranking
+        enriched_repos = []
+        for full_name in found_repos_names:
+            try:
+                repo_data = repo_service.get_repository(full_name)
+                # Simple score: stars + forks
+                stars = repo_data.get("stargazers_count", 0)
+                forks = repo_data.get("forks_count", 0)
+                score = (stars * 2) + forks
+
+                enriched_repos.append(
+                    {
+                        "full_name": full_name,
+                        "description": repo_data.get("description"),
+                        "stars": stars,
+                        "forks": forks,
+                        "updated_at": repo_data.get("updated_at"),
+                        "score": score,
+                    }
+                )
+            except Exception:
+                continue
+
+        # Sort and take top 10
+        enriched_repos.sort(key=lambda x: x["score"], reverse=True)
+        top_repos = enriched_repos[:10]
+
+        # Step 4: Extract READMEs
+        final_results = []
+        for repo in top_repos:
+            try:
+                readme_data = repo_service.get_readme(repo["full_name"])
+                content_b64 = readme_data.get("content", "")
+                content_bytes = base64.b64decode(content_b64)
+                content = content_bytes.decode("utf-8", errors="ignore")
+                # Trim if too long (max 3000 chars per README)
+                repo["readme"] = (
+                    content[:3000] + "..." if len(content) > 3000 else content
+                )
+            except Exception:
+                repo["readme"] = "No README available"
+            final_results.append(repo)
+
+        return final_results
+
+
 # ==========================================
 # 3. REGISTRO DE HERRAMIENTAS (Open/Closed Principle)
 # ==========================================
@@ -179,8 +293,9 @@ class ToolRegistry:
 
 # Instanciamos el registro y agregamos las herramientas
 registry = ToolRegistry()
-registry.register(SearchGithubReposTool())
+# registry.register(SearchGithubReposTool())
 registry.register(SearchGithubCodeTool())
+registry.register(GithubDeepSearchTool())
 # Para agregar más en el futuro, solo llamas a: registry.register(NuevaHerramientaTool())
 
 

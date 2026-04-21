@@ -1,10 +1,10 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
-	"name": "repo_searcher backend",
+	"name": "repo_searcher-backend",
 	"dockerComposeFile": "../docker-compose.yml",
 	"service": "api_repo",
-	"workspaceFolder": "/code",
+	"workspaceFolder": "/workspace/back",
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {}
 	},

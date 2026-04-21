@@ -11,14 +11,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-WORKDIR /code
+WORKDIR /workspace/back
 COPY pyproject.toml uv.lock* ./
 
-# Install dependencies with uv
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen
 
-ENV PATH=/code/.venv/bin:$PATH
+ENV PATH=/workspace/back/.venv/bin:$PATH
 
 COPY . .
 
